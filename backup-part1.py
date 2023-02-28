@@ -4,22 +4,25 @@ import grpc
 import ops_pb2
 import ops_pb2_grpc
 
+# Run with: python backup-part1.py 9001
+# Should work with any functional port. Assumed that host is localhost.
 
 class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
     d = {}
-    def __init__(self, d):
+    def __init__(self):
         self.d = {}
                 
     def putRequestOperation(self, request, context):
         self.d[request.key] = request.value
+        print("Putting: " + request.key + ": " + request.value)
+        print(self.d)
         return ops_pb2.replyPutRequest(response = "successful")
 
-    def getRequestOperation(self, request, context):  
-        val = self.d.get(request.key, None)
-        if (val == None):
-            return ops_pb2.replyGetRequest(response = "not Found")
-        else:
-            return ops_pb2.replyGetRequest(response = val)
+    def getRequestOperation(self, request, context):
+        print("Getting:" + request.key + ": ")  
+        val = self.d.get(request.key, "not found")
+        print(val)
+        return ops_pb2.replyGetRequest(response = val)
 
 
 def serve(hostname, numThreads):
@@ -27,13 +30,13 @@ def serve(hostname, numThreads):
     ops_pb2_grpc.add_PrimaryBackupServiceServicer_to_server(PrimaryBackupServiceServicer(), server)
     server.add_insecure_port(hostname)
     server.start()
-    print("Server started, listening on " + hostname)
+    print("Backup server started, listening on " + hostname)
     server.wait_for_termination()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("host")
     parser.add_argument("port")
     args = parser.parse_args()
-    hostname = args.host + ":" + args.port
+    # Instructions state to assume host is localhost.
+    hostname = "localhost:" + args.port
     serve(hostname, 10)
