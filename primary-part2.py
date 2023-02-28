@@ -1,10 +1,11 @@
+import concurrent.futures
 from concurrent import futures
 import argparse
 import grpc
 import ops_pb2
 import ops_pb2_grpc
 
-# Run with: python primary-part1.py 9001
+# Run with: python primary-part2.py 9001
 # Should work with any functional port. Assumed that host is localhost.
 
 class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
@@ -13,6 +14,12 @@ class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
         self.sequenceNum = 0
         # Clear log contents.
         self.log = open("log.txt", "w")
+
+        # Make list of ports.
+        self.ports = []
+        with open("location.txt", "r") as loc_file:
+            for line in loc_file:
+                self.ports.append(line)
 
         # Process Operations.
         with open('operations.txt') as topo_file:
@@ -30,29 +37,27 @@ class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
         return ops_pb2.replyPutRequest(response = result)
     
     def localPut(self, keyIn, valueIn):
-        returnMessage = self.sendPut(keyIn, valueIn)
-        if (returnMessage == "successful"):
-            self.d[keyIn] = valueIn
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = [executor.submit(self.sendPut, keyIn, valueIn, port) for port in self.ports]
+        for i in concurrent.futures.as_completed(results):
             with open("log.txt", "a") as f:
-                f.write("put " + keyIn + " " + valueIn +"\n")
-            return "successful"
-        return "unsuccessful"
+                f.write(i.result()[1] + " put " + keyIn + " " + valueIn +"\n")
+        self.d[keyIn] = valueIn  
+        with open("log.txt", "a") as f:
+            f.write("put " + keyIn + " " + valueIn +"\n")
+        return "successful"
 
-    def sendPut(self, keyIn, valueIn):
+    def sendPut(self, keyIn, valueIn, port):
         # Increment sequenceNum to track operations.
         self.sequenceNum += 1
-
-        # Get location of backup.
-        with open("location.txt") as loc_file:
-            port = loc_file.readline()
         hostname = "localhost:" + port
-
         # Send put request to backup.
         with grpc.insecure_channel(hostname) as channel:
             stub = ops_pb2_grpc.PrimaryBackupServiceStub(channel)
             val = stub.putRequestOperation(ops_pb2.putRequest(\
                 key=keyIn, value=valueIn, sequenceNumber=self.sequenceNum))
-        return val.response
+        result = [val.response, hostname]
+        return result
 
 
     # GET OPERATIONS.
@@ -61,28 +66,26 @@ class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
         return ops_pb2.replyGetRequest(response = result)
         
     def localGet(self, keyIn):
-        returnMessage = self.sendGet(keyIn)
-        if (returnMessage == "not found"):
-            with open("log.txt", "a") as f:
-                f.write("get " + keyIn + " not found in backup. Operation Ended.\n")
-            return "not found"
-        else:
-            val = self.d.get(keyIn, "not found")
-            with open("log.txt", "a") as f:
-                f.write("get " + keyIn + " " + val + "\n")
-            return val
-            
-    def sendGet(self, keyIn):
-        # Get location of backup.
-        with open("location.txt") as loc_file:
-            port = loc_file.readline()
-        hostname = "localhost:" + port
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = [executor.submit(self.sendGet, keyIn, port) for port in self.ports]
 
+        for i in concurrent.futures.as_completed(results):
+            with open("log.txt", "a") as f:
+                f.write(i.result()[1] + " get " + keyIn + " " + i.result()[0] + "\n")
+
+        result = self.d.get(keyIn, "not found")
+        with open("log.txt", "a") as f:
+            f.write("get " + keyIn + " " + result + "\n")
+        return result
+            
+    def sendGet(self, keyIn, port):
+        hostname = "localhost:" + port
         # Send get request to backup.
         with grpc.insecure_channel(hostname) as channel:
             stub = ops_pb2_grpc.PrimaryBackupServiceStub(channel)
             val = stub.getRequestOperation(ops_pb2.getRequest(key=keyIn))
-        return val.response
+        result =[val.response, hostname]
+        return result
 
 
 

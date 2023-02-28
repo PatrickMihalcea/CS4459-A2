@@ -1,6 +1,27 @@
+Hello World localhost:5001
+so many things to say. HELLLO.localhost:5001
+ put Patrick Mihalcea
+Hello World localhost:9001so many things to say. HELLLO.localhost:9001 put Patrick Mihalcea
 put Patrick Mihalcea
+Hello World localhost:9001so many things to say. HELLLO.localhost:9001 put Eric Janssen
+Hello World localhost:5001
+so many things to say. HELLLO.localhost:5001
+ put Eric Janssen
 put Eric Janssen
+Hello World localhost:5001
+so many things to say. HELLLO.localhost:5001
+ put Kate Dienstmann
+Hello World localhost:9001so many things to say. HELLLO.localhost:9001 put Kate Dienstmann
 put Kate Dienstmann
+localhost:9001 get Patrick Mihalcea
+localhost:5001
+ get Patrick Mihalcea
 get Patrick Mihalcea
+localhost:5001
+ get Kate Dienstmann
+localhost:9001 get Kate Dienstmann
 get Kate Dienstmann
-get Tyler not found in backup. Operation Ended.
+localhost:5001
+ get Tyler not found
+localhost:9001 get Tyler not found
+get Tyler not found

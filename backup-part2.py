@@ -4,7 +4,8 @@ import grpc
 import ops_pb2
 import ops_pb2_grpc
 
-# Run with: python backup-part1.py 9001
+# Completely the same as part 1.
+# Run with: python backup-part2.py 9001
 # Should work with any functional port. Assumed that host is localhost.
 
 class PrimaryBackupServiceServicer(ops_pb2_grpc.PrimaryBackupServiceServicer):
